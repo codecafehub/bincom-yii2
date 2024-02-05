@@ -66,8 +66,7 @@ class SiteController extends Controller
             ->joinWith('pollingUnit')
             ->where(['polling_unit.lga_id' => $selectedLgaUniqueId])
             ->all();
-    
-        // Calculate the total score for each party in the LGA
+
         $partyTotals = [];
         foreach ($announcedResults as $result) {
             $partyAbbreviation = $result->party_abbreviation;
@@ -109,26 +108,43 @@ class SiteController extends Controller
         $party = Party::find();
         $party_names = $party->all();
         $ip = Yii::$app->request->userIP;
-        // $ip = Yii::$app->request->getUserIP();
+
         $model = new AnnouncedPuResults();
+
         if ($model->load(Yii::$app->request->post())) {
             $model->user_ip_address = $ip;
-            if ($model->save()) {
-                Yii::$app->session->setFlash('success', 'Polling unit result saved successfully.');
-                return $this->refresh();     
+
+            // Check if the party already exists in the selected polling unit
+            $existingResult = AnnouncedPuResults::findOne([
+                'polling_unit_uniqueid' => $model->polling_unit_uniqueid,
+                'party_abbreviation' => $model->party_abbreviation,
+            ]);
+
+            if ($existingResult !== null) {
+                Yii::$app->session->setFlash('warning', 'The selected party already has a score in this polling unit.');
             } else {
-                Yii::error('Failed to save data: ' . json_encode($model->errors));
-                Yii::$app->session->setFlash('error', 'Failed to save data.');
+                if ($model->party_score !== null) {
+                    if ($model->save()) {
+                        Yii::$app->session->setFlash('success', 'Polling unit result saved successfully.');
+                        return $this->refresh();
+                    } else {
+                        Yii::error('Failed to save data: ' . json_encode($model->errors));
+                        Yii::$app->session->setFlash('error', 'Failed to save data.');
+                    }
+                } else {
+                    Yii::$app->session->setFlash('warning', 'Please enter a valid score for the selected party.');
+                }
             }
         } else {
-            Yii::error('An error occured.');
+            Yii::error('An error occurred.');
         }
-    
+
         return $this->render('store-score', [
             'model' => $model,
             'polling_units' => $polling_units,
             'party_names' => $party_names,
         ]);
     }
+
     
 }
