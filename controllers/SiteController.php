@@ -53,24 +53,6 @@ class SiteController extends Controller
         ]);
     }
 
-    // public function actionDisplayResultse()
-    // {
-    //     $request = Yii::$app->request;
-    //     $selectedLgaUniqueId = $request->post('lga_uniqueid');
-    //     $pollingUnits = PollingUnit::find()->where(['lga_id' => $selectedLgaUniqueId])->all();
-    //     $selectedLga = Lga::findOne(['uniqueid' => $selectedLgaUniqueId]);
-    //     $selectedLgaName = ($selectedLga !== null) ? $selectedLga->lga_name : '';
-    //     $announcedResults = AnnouncedPuResults::find()
-    //         ->joinWith('pollingUnit')  
-    //         ->where(['polling_unit.lga_id' => $selectedLgaUniqueId])
-    //         ->all();
-
-    //     return $this->render('display-results', [
-    //         'pollingUnits' => $pollingUnits,
-    //         'selectedLgaName' => $selectedLgaName,
-    //         'announcedResults' => $announcedResults,
-    //     ]);
-    // }
 
     public function actionDisplayResults()
     {
