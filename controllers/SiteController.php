@@ -22,7 +22,6 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $query = PollingUnit::find();
-        // $query->orderBy(['date_entered' => SORT_DESC]);
             $pagination = new Pagination([
                 'defaultPageSize' => 5,
                 'totalCount' => $query->count(),
@@ -54,44 +53,72 @@ class SiteController extends Controller
         ]);
     }
 
-    public function actionDisplayResultse()
-    {
-        $request = Yii::$app->request;
-        $selectedLgaUniqueId = $request->post('lga_uniqueid');
-        $pollingUnits = PollingUnit::find()->where(['lga_id' => $selectedLgaUniqueId])->all();
-        $selectedLga = Lga::findOne(['uniqueid' => $selectedLgaUniqueId]);
-        $selectedLgaName = ($selectedLga !== null) ? $selectedLga->lga_name : '';
-        $announcedResults = AnnouncedPuResults::find()
-            ->joinWith('pollingUnit')  
-            ->where(['polling_unit.lga_id' => $selectedLgaUniqueId])
-            ->all();
+    // public function actionDisplayResultse()
+    // {
+    //     $request = Yii::$app->request;
+    //     $selectedLgaUniqueId = $request->post('lga_uniqueid');
+    //     $pollingUnits = PollingUnit::find()->where(['lga_id' => $selectedLgaUniqueId])->all();
+    //     $selectedLga = Lga::findOne(['uniqueid' => $selectedLgaUniqueId]);
+    //     $selectedLgaName = ($selectedLga !== null) ? $selectedLga->lga_name : '';
+    //     $announcedResults = AnnouncedPuResults::find()
+    //         ->joinWith('pollingUnit')  
+    //         ->where(['polling_unit.lga_id' => $selectedLgaUniqueId])
+    //         ->all();
 
-        return $this->render('display-results', [
-            'pollingUnits' => $pollingUnits,
-            'selectedLgaName' => $selectedLgaName,
-            'announcedResults' => $announcedResults,
-        ]);
-    }
+    //     return $this->render('display-results', [
+    //         'pollingUnits' => $pollingUnits,
+    //         'selectedLgaName' => $selectedLgaName,
+    //         'announcedResults' => $announcedResults,
+    //     ]);
+    // }
 
     public function actionDisplayResults()
     {
         $request = Yii::$app->request;
         $selectedLgaUniqueId = $request->post('lga_uniqueid');
-  
+    
         $selectedLga = Lga::findOne(['uniqueid' => $selectedLgaUniqueId]);
         $pollingUnits = PollingUnit::find()->where(['lga_id' => $selectedLgaUniqueId])->all();
         $selectedLgaName = ($selectedLga !== null) ? $selectedLga->lga_name : '';
         $announcedResults = AnnouncedPuResults::find()
-            ->joinWith('pollingUnit')  
+            ->joinWith('pollingUnit')
             ->where(['polling_unit.lga_id' => $selectedLgaUniqueId])
             ->all();
-
+    
+        // Calculate the total score for each party in the LGA
+        $partyTotals = [];
+        foreach ($announcedResults as $result) {
+            $partyAbbreviation = $result->party_abbreviation;
+            $partyScore = $result->party_score;
+    
+            if (!isset($partyTotals[$partyAbbreviation])) {
+                $partyTotals[$partyAbbreviation] = 0;
+            }
+    
+            $partyTotals[$partyAbbreviation] += $partyScore;
+        }
+    
+        // Calculate the total score for the LGA
+        $totalLgaScore = 0;
+        foreach ($pollingUnits as $pollingUnit) {
+            $partyScores = [];
+            foreach ($pollingUnit->announcedResults as $result) {
+                $partyScore = $result->party_score;
+                $partyScores[] = $partyScore;
+            }
+            $totalLgaScore += array_sum($partyScores);
+        }
+    
         return $this->render('display-results', [
             'pollingUnits' => $pollingUnits,
             'announcedResults' => $announcedResults,
             'selectedLgaName' => $selectedLgaName,
+            'totalLgaScore' => $totalLgaScore,
+            'partyTotals' => $partyTotals,
         ]);
     }
+    
+    
 
     public function actionStoreScore()
     {
